@@ -1,0 +1,23 @@
+{
+  "name": "quickpark-backend",
+  "version": "1.0.0",
+  "description": "quickpark backend code",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "nodemon index.js"
+  },
+  "author": "jacob oshevire",
+  "license": "ISC",
+  "dependencies": {
+    "@vis.gl/react-google-maps": "^1.7.1",
+    "cloudinary": "^2.8.0",
+    "cors": "^2.8.5",
+    "dotenv": "^17.2.3",
+    "express": "^5.1.0",
+    "mongoose": "^9.0.0",
+    "multer": "^2.0.2",
+    "nodemon": "^3.1.11",
+    "path": "^0.12.7"
+  }
+}
