@@ -1,70 +1,144 @@
+const { default: axios } = require("axios");
 const express = require("express"),
-    cloudinary = require("../utils/cloudinary.js"),
+    cloudinarys = require("../utils/cloudinary.js"),
     upload = require("../utils/mutler.js"),
     path = require("path"),
-    Seller = require("../models/seller.js")
+    Seller = require("../models/seller.js"),
+    Joi = require("joi"),
+    startWatch = require("../utils/watcher.js");
+
+    //to auto delete the image from cloudinary after 
+    // the post auto delete it self after the expired time
+    startWatch();
 
 // setting router to router
 const router = express.Router()
 
-//post routes
-router.post(("/", upload.single("image")), async (req,res)=>{
-    //connecting to cloudinary
-    const fileresult = await cloudinary.uploader.upload(req.file.path)
-
-    //paramsing the data to create new one
-    const seller = {
-        location: req.body.location,
-        sortcode: req.body.sortcode,
-        postalcode: req.body.postalcode,
-        phonenumber: req.body.phonenumber,
-        price: req.body.price,
-        image: fileresult.secure_url, //image = file secure url at cloudinary
-        imagewidth: fileresult.width,
-        imageheight: fileresult.height,
-        accountnumber: req.body.accountnumber,
-        accountname: req.body.accountname
-    };
-
-    // variable for error
-    let result
-
-    //creating new seller
-    const sellers = new Seller(seller)
-
-    // error validation
-    // const schema = Joi.object({
-    //     name: Joi.string().min(2).required(),
-    //     description: Joi.string().min(200).max(3000).required(),
-    //     image: Joi.string(),
-    //     tools: Joi.string(),
-    // });
-
-    //setting result to the schema for the error validation above
-    result = schema.validate(req.body);
-    if (result.error) {
-        return res.status(400).json(result.error.details[0].message);
-    };
-
-    if (!seller.image.match(/\.(jpg|jpeg|png|gif|dmp|webp|ico|tiff|xbm|tif|pjp|pjpeg|jfif)$/i)) {    //checking for error in the newing created post
-        // error message
-        return res.status(400).json({
-            "error": "file type don't match"
-        })
-    }
-
-    sellers.save().then((seller) => {
-        return res.status(200).json({ seller })
-    })    //if no error save the post to monogodb
-    .catch((e) => {
-        return res.status(400).json(e.message)
-    })
-
-})
 //get routes
+router.get("/",(req,res)=>{
+    Seller.find().then((Seller)=>{
+        if(!Seller){
+            res.status(400).send("no parking space has be uploaded yet")
+        }
+        res.status(201).json({Seller})
+    }).catch(e=>{
+        res.status(500).json({error:e.message})
+    })
+})
+
+//post routes
+router.post("/",
+    upload.single("image"),
+    (req, res) => {
+
+        // 1️⃣ Upload to Cloudinary
+        cloudinarys.uploader.upload(req.file.path)
+            .then((fileresult) => {
+
+                // 2️⃣ Geocode the location
+                let url = `https://maps.googleapis.com/maps/api/geocode/json?address=${req.body.location}&key=${process.env.GOOGLEAPI}`;
+
+                return axios.get(url)
+                    .then((response) => ({ fileresult, response }));
+            })
+            .then(({ fileresult, response }) => {
+                // Duration (in hours) provided by user
+                const lifetimeMs = 60 * 60 * req.body.duration * 1000;
+                // Extract coordinates
+                let newLng = response.data.results[0].geometry.location.lng;
+                let newLat = response.data.results[0].geometry.location.lat;
+
+                // 3️⃣ Validate input BEFORE creating a Seller
+                const schema = Joi.object({
+                    location: Joi.string().min(2).required(),
+                    phonenumber: Joi.number().integer().required().min(11),
+                    postalcode: Joi.string().required(),
+                    price: Joi.number().required(),
+                    accountnumber: Joi.number().required().min(10),
+                    accountname: Joi.string().required(),
+                    sortcode: Joi.number().required().min(6),
+                    duration: Joi.number().required()   // ADD duration validation
+                });
+
+                const result = schema.validate(req.body);
+                if (result.error) {
+                    return res.status(400).json(result.error.details[0].message);
+                }
+
+                // 4️⃣ Create seller object
+                const seller = new Seller({
+                    locations: req.body.locations,
+                    sortcode: req.body.sortcode,
+                    postalcode: req.body.postalcode,
+                    phonenumber: req.body.phonenumber,
+                    price: req.body.price,
+                    image: fileresult.secure_url,
+                    imagewidth: fileresult.width,
+                    imageheight: fileresult.height,
+                    accountnumber: req.body.accountnumber,
+                    accountname: req.body.accountname,
+                    long: newLng,
+                    lat: newLat,
+
+                    // TTL auto delete
+                    expiresAt: new Date(Date.now() + lifetimeMs)
+                });
+
+                // 5️⃣ Save seller
+                return seller.save()
+                    .then((savedSeller) => {
+                        return res.status(200).json({ seller: savedSeller });
+                    })
+            })
+            .catch((error) => {
+                console.error(error);
+                return res.status(500).json({ error: error.message });
+            });
+    }
+);
 //delete routes
+router.delete("/:_id", async (res,req)=>{
+    try {
+        const id = req.params.id;
+
+        // Find the document
+        const item = await Item.findById(id);
+        if (!item) {
+        return res.status(404).json({ message: "Item not found" });
+        }
+
+        // Delete image from Cloudinary (if exists)
+        if (item.cloudinaryPublicId) {
+        await cloudinary.uploader.destroy(item.cloudinaryPublicId);
+        }
+
+        // Delete document from DB
+        await Item.findByIdAndDelete(id);
+
+        res.json({ message: "Item deleted successfully" });
+
+    } catch (error) {
+        console.error("Delete error:", error);
+        res.status(500).json({ message: "Server error" });
+    }
+})
 //put routes
 
+//get post with id
+router.get("/:_id", (res, req)=>{
+    Seller.findbyId(req.params._id).then((Seller)=>{
+
+        //if the seller post has expired or deleted
+        if(!Seller){
+            res.status(404).send("this parking space has expired")
+        }
+        res.status(201).json({Seller})
+    }).catch(e=>{
+        res.status(500).json({error:e.message})
+    })
+})
+
+//make express know i'm using router
 router.use(express.json());
 
 // exporting router

@@ -3,6 +3,7 @@ const express = require("express"),
     mongoose = require("mongoose"),
     cors = require("cors"),
     dotenv = require("dotenv");
+    
 
 
 //setting dotenv file
@@ -22,7 +23,8 @@ mongoose.Promise = Promise;
 
 
 //creating the routes
-app.use("./api/sellerpost", require("./Routes/seller"))
+app.use("/api/sellerpost", require("./Routes/seller"))
+app.use("/api/user", require("./Routes/user"))
 
 
 //home welcome note and direction on how to use the api
