@@ -1,7 +1,7 @@
 const mongoose = require("mongoose");
 
 const Sellerschema = new mongoose.Schema({
-    location: String,
+    locations: String,
     postalcode: String,
     phonenumber: String,
     price: Number,
