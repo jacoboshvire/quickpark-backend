@@ -45,7 +45,7 @@ router.post("/",
                 // Duration (in hours) provided by user
                 const lifetimeMs = 60 * 60 * req.body.duration * 1000;
                 // Extract coordinates
-                let newLng = response.data.results[0].geometry.locations.lng;
+                let newLng = response.data.results[0].geometry.locations.long;
                 let newLat = response.data.results[0].geometry.locations.lat;
 
                 // 3️⃣ Validate input BEFORE creating a Seller
