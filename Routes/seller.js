@@ -50,7 +50,7 @@ router.post("/",
 
                 // 3️⃣ Validate input BEFORE creating a Seller
                 const schema = Joi.object({
-                    location: Joi.string().min(2).required(),
+                    locations: Joi.string().min(2).required(),
                     phonenumber: Joi.number().integer().required().min(11),
                     postalcode: Joi.string().required(),
                     price: Joi.number().required(),
