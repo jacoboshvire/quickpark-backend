@@ -36,7 +36,7 @@ router.post("/",
             .then((fileresult) => {
 
                 // 2️⃣ Geocode the location
-                let url = `https://maps.googleapis.com/maps/api/geocode/json?address=${req.body.location}&key=${process.env.GOOGLEAPI}`;
+                let url = `https://maps.googleapis.com/maps/api/geocode/json?address=${req.body.locations}&key=${process.env.GOOGLEAPI}`;
 
                 return axios.get(url)
                     .then((response) => ({ fileresult, response }));
@@ -45,8 +45,8 @@ router.post("/",
                 // Duration (in hours) provided by user
                 const lifetimeMs = 60 * 60 * req.body.duration * 1000;
                 // Extract coordinates
-                let newLng = response.data.results[0].geometry.location.lng;
-                let newLat = response.data.results[0].geometry.location.lat;
+                let newLng = response.data.results[0].geometry.locations.lng;
+                let newLat = response.data.results[0].geometry.locations.lat;
 
                 // 3️⃣ Validate input BEFORE creating a Seller
                 const schema = Joi.object({
