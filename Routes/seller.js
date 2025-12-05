@@ -97,7 +97,7 @@ router.post("/",
     }
 );
 //delete routes
-router.delete("/:_id", async (res,req)=>{
+router.delete("/:_id", async (req, res)=>{
     try {
         const id = req.params.id;
 
@@ -125,17 +125,22 @@ router.delete("/:_id", async (res,req)=>{
 //put routes
 
 //get post with id
-router.get("/:id", (res, req)=>{
-    Seller.findbyId(req.params._id).then((Seller)=>{
-
+router.get("/:id", async (req, res)=>{
+    try{
+        const seller = await Seller.findById(req.params.id)
+        console.log('B')
         //if the seller post has expired or deleted
-        if(!Seller){
+        if(!seller){
             res.status(404).send("this parking space has expired")
         }
-        res.status(201).json({Seller})
-    }).catch(e=>{
-        res.status(500).json({error:e.message})
-    })
+
+        console.log('A')
+        return res.status(200).json(seller)
+    }catch(e){
+        console.error("Error fetching seller by ID:", e);
+        return res.status(500).json({error: "Server error"});
+    }
+
 })
 
 //make express know i'm using router
