@@ -125,7 +125,7 @@ router.delete("/:_id", async (res,req)=>{
 //put routes
 
 //get post with id
-router.get("/:_id", (res, req)=>{
+router.get("/:id", (res, req)=>{
     Seller.findbyId(req.params._id).then((Seller)=>{
 
         //if the seller post has expired or deleted
