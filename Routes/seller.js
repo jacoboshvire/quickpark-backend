@@ -101,7 +101,7 @@ router.post("/", auth,
                     expiresAt: new Date(Date.now() + lifetimeMs),
 
                     //user data from auth middleware
-                    user:req.user._id
+                    user:req.user.id
                 });
 
                 // 5️⃣ Save seller
@@ -147,8 +147,8 @@ router.delete("/:_id", async (req, res)=>{
 //get post with id
 router.get("/:id", async (req, res)=>{
     try{
-        const seller = await Seller.findById(req.params.id).populate("user", "fullname avatar email")
-        console.log('B')
+        const seller = await Seller.findById(req.params.id)
+        .populate("user", "fullname avatar email")
         //if the seller post has expired or deleted
         if(!seller){
             res.status(404).send("this parking space has expired")
