@@ -101,11 +101,7 @@ router.post("/", auth,
                     expiresAt: new Date(Date.now() + lifetimeMs),
 
                     //user data from auth middleware
-                    user: {
-                        fullname: req.user.fullname,
-                        avatar: req.user.avatar,
-                        id: req.user.id
-                    }
+                    user:req.user.id
                 });
 
                 // 5️⃣ Save seller
