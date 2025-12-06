@@ -1,6 +1,12 @@
 const mongoose = require("mongoose");
 
 const Sellerschema = new mongoose.Schema({
+    //Link seller post to logged-in user
+    user: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User",
+        required: true
+    },
     locations: String,
     postalcode: String,
     phonenumber: String,
@@ -25,7 +31,7 @@ const Sellerschema = new mongoose.Schema({
     }
 });
 
-// ⭐ ADD THIS → TTL auto-delete
+// ADD THIS → TTL auto-delete
 Sellerschema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
 
 module.exports = mongoose.model("Seller", Sellerschema);

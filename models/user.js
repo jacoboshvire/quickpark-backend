@@ -21,6 +21,10 @@ const UserSchema = new mongoose.Schema(
     dateCreated: {
       type: Date,
       default: Date.now
+    },
+    avatar: {
+      type: String,
+      default: "https://res.cloudinary.com/dr0yyqvj6/image/upload/v1765055574/avatar_l6mc3s.png"
     }
   },
   {

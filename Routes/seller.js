@@ -5,6 +5,7 @@ const express = require("express"),
     upload = require("../utils/mutler.js"),
     path = require("path"),
     Seller = require("../models/seller.js"),
+    auth = require("../middleware/auth.js"),
     Joi = require("joi"),
     startWatch = require("../utils/watcher.js");
 
@@ -22,10 +23,11 @@ router.get("/", async (req,res)=>{
         const limit = parseInt(req.query.limit) || 10;
         const skip = (page - 1) * limit;
 
-        const sellers = await Seller.find()
+        const sellers = await Seller.find().populate("user", "fullname avatar email")
             .skip(skip)
             .limit(limit)
             .lean();
+            
 
         res.status(200).json({
             Seller: sellers,
@@ -39,7 +41,7 @@ router.get("/", async (req,res)=>{
 })
 
 //post routes
-router.post("/",
+router.post("/", auth,
     upload.single("image"),
     (req, res) => {
 
@@ -96,7 +98,14 @@ router.post("/",
                     lat: newLat,
 
                     // TTL auto delete
-                    expiresAt: new Date(Date.now() + lifetimeMs)
+                    expiresAt: new Date(Date.now() + lifetimeMs),
+
+                    //user data from auth middleware
+                    user: {
+                        fullname: req.user.fullname,
+                        avatar: req.user.avatar,
+                        id: req.user.id
+                    }
                 });
 
                 // 5️⃣ Save seller
@@ -157,6 +166,11 @@ router.get("/:id", async (req, res)=>{
     }
 
 })
+
+router.get("/my-posts", auth, async (req, res) => {
+  const posts = await Seller.find({ user: req.user.id });
+  res.json(posts);
+});
 
 //make express know i'm using router
 router.use(express.json());

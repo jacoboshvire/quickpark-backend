@@ -3,7 +3,6 @@
   "version": "1.0.0",
   "description": "quickpark backend code",
   "main": "index.js",
-  
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "nodemon index.js"
@@ -18,7 +17,7 @@
     "dotenv": "^17.2.3",
     "express": "^5.1.0",
     "joi": "^18.0.2",
-    "jsonwebtoken": "^9.0.2",
+    "jsonwebtoken": "^9.0.3",
     "mongoose": "^9.0.0",
     "multer": "^2.0.2",
     "node-geocoder": "^4.4.1",

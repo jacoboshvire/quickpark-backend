@@ -2,6 +2,9 @@ const express = require('express');
 const bcrypt = require('bcryptjs');
 const User = require('../models/user');
 const Joi = require('joi');
+const jwt = require('jsonwebtoken');
+
+const JWT_SECRET = process.env.JWT_SECRET || 'your_jwt_secret_key';
 
 const router = express.Router();
 
@@ -146,6 +149,52 @@ router.delete('/:id', (req, res) => {
       console.error("Error in DELETE /users/:id:", err);
       res.status(500).json({ message: err.message || 'Server error' });
     });
+});
+
+// LOGIN route
+router.post("/login", async (req, res) => {
+  try {
+    const { email, password } = req.body;
+
+    // Validate fields
+    if (!email || !password) {
+      return res.status(400).json({ message: "Email and password required" });
+    }
+
+    // Find user
+    const user = await User.findOne({ email: email.toLowerCase() });
+    if (!user) {
+      return res.status(401).json({ message: "Invalid email or password" });
+    }
+
+    // Compare password
+    const match = await bcrypt.compare(password, user.password);
+    if (!match) {
+      return res.status(401).json({ message: "Invalid email or password" });
+    }
+
+    // Create JWT token
+    const token = jwt.sign(
+      { id: user._id, email: user.email },
+      JWT_SECRET,
+      { expiresIn: "7d" } // one week
+    );
+
+    // Return safe user + token
+    res.json({
+      message: "Login successful",
+      token,
+      user: {
+        _id: user._id,
+        fullname: user.fullname,
+        email: user.email
+      }
+    });
+
+  } catch (err) {
+    console.error("Error in POST /users/login:", err);
+    res.status(500).json({ message: "Server error" });
+  }
 });
 
 module.exports = router;
