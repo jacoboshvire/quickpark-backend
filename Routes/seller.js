@@ -1,4 +1,5 @@
 const { default: axios } = require("axios");
+const { time } = require("console");
 const express = require("express"),
     cloudinarys = require("../utils/cloudinary.js"),
     upload = require("../utils/mutler.js"),
@@ -57,6 +58,7 @@ router.post("/",
                     accountnumber: Joi.number().required().min(10),
                     accountname: Joi.string().required(),
                     sortcode: Joi.number().required().min(6),
+                    timeNeeded: Joi.string().required(),
                     duration: Joi.number().required()   // ADD duration validation
                 });
 
@@ -77,6 +79,8 @@ router.post("/",
                     imageheight: fileresult.height,
                     accountnumber: req.body.accountnumber,
                     accountname: req.body.accountname,
+                    duration: req.body.duration,
+                    timeNeeded: req.body.timeNeeded,
                     long: newLng,
                     lat: newLat,
 

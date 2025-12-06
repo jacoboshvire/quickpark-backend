@@ -14,6 +14,7 @@ const Sellerschema = new mongoose.Schema({
     lat: Number,
     long: Number,
     duration: Number,
+    timeNeeded: String,
     date: {
         type: Date,
         default: Date.now
