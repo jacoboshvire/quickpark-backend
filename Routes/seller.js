@@ -16,15 +16,26 @@ const express = require("express"),
 const router = express.Router()
 
 //get routes
-router.get("/",(req,res)=>{
-    Seller.find().then((Seller)=>{
-        if(!Seller){
-            res.status(400).send("no parking space has be uploaded yet")
-        }
-        res.status(201).json({Seller})
-    }).catch(e=>{
-        res.status(500).json({error:e.message})
-    })
+router.get("/", async (req,res)=>{
+    try {
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 10;
+        const skip = (page - 1) * limit;
+
+        const sellers = await Seller.find()
+            .skip(skip)
+            .limit(limit)
+            .lean();
+
+        res.status(200).json({
+            Seller: sellers,
+            page,
+            limit
+        });
+    } catch (err) {
+        console.log(err);
+        res.status(500).json({ message: "Server error" });
+    }
 })
 
 //post routes
