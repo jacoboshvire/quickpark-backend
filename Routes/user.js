@@ -2,7 +2,10 @@ const express = require('express');
 const bcrypt = require('bcryptjs');
 const User = require('../models/user');
 const Joi = require('joi');
-const jwt = require('jsonwebtoken');
+const jwt = require('jsonwebtoken'),
+    cloudinarys = require("../utils/cloudinary.js"),
+    upload = require("../utils/mutler.js"),
+    path = require("path");
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your_jwt_secret_key';
 
@@ -98,42 +101,49 @@ router.get('/:id', (req, res) => {
 });
 
 // Update user
-router.put('/:id', (req, res) => {
-  const { error } = updateSchema.validate(req.body);
+router.put("/:id", upload.single("avatar"), async (req, res) => {
+  try {
+    // ✔ Validate fields correctly
+    const { error } = UesrSchema.validate(req.body);
+    if (error) {
+      return res.status(400).json({ message: error.details[0].message });
+    }
 
-  if (error) {
-    return res.status(400).json({ message: error.details[0].message });
+    // ✔ Find user
+    let user = await User.findById(req.params.id);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    let updates = { ...req.body };
+
+    // ✔ Hash password if included
+    if (updates.password) {
+      updates.password = await bcrypt.hash(updates.password, 10);
+    }
+
+    // ✔ Upload image if provided
+    if (req.file) {
+      const cloudUpload = await cloudinarys.uploader.upload(req.file.path);
+      updates.avatar = cloudUpload.secure_url; // add avatar field
+    }
+
+    // ✔ Perform update
+    const updatedUser = await User.findByIdAndUpdate(req.params.id, updates, {
+      new: true,
+    }).select("-password");
+
+    res.json({
+      message: "User updated successfully",
+      user: updatedUser,
+    });
+
+  } catch (err) {
+    console.error("Error in PUT /users/:id:", err);
+    res.status(500).json({ message: err.message || "Server error" });
   }
-
-  const updates = { ...req.body };
-
-  const hashPasswordIfNeeded = () => {
-    if (!updates.password) return Promise.resolve();
-
-    return bcrypt.hash(updates.password, 10).then((hashed) => {
-      updates.password = hashed;
-    });
-  };
-
-  hashPasswordIfNeeded()
-    .then(() => {
-      return User.findByIdAndUpdate(
-        req.params.id,
-        updates,
-        { new: true }
-      ).select('-password');
-    })
-    .then((user) => {
-      if (!user) {
-        return res.status(404).json({ message: 'User not found' });
-      }
-      res.json(user);
-    })
-    .catch((err) => {
-      console.error("Error in PUT /users/:id:", err);
-      res.status(500).json({ message: err.message || 'Server error' });
-    });
 });
+
 
 // Delete user
 router.delete('/:id', (req, res) => {
@@ -196,5 +206,7 @@ router.post("/login", async (req, res) => {
     res.status(500).json({ message: "Server error" });
   }
 });
+
+
 
 module.exports = router;
