@@ -87,13 +87,21 @@ router.get('/', (req, res) => {
 // GET LOGGED-IN USER USING JWT
 router.get("/me", async (req, res) => {
   try {
-    const authHeader = req.headers.authorization;
+    let token = null;
 
-    if (!authHeader) {
-      return res.status(401).json({ message: "No token provided" });
+    // Check Authorization header
+    if (req.headers.authorization?.startsWith("Bearer ")) {
+      token = req.headers.authorization.split(" ")[1];
     }
 
-    const token = authHeader.split(" ")[1]; // "Bearer token"
+    // Fallback: check cookies
+    if (!token && req.cookies?.token) {
+      token = req.cookies.token;
+    }
+
+    if (!token) {
+      return res.status(401).json({ message: "No token provided" });
+    }
 
     const decoded = jwt.verify(token, JWT_SECRET);
 
@@ -110,6 +118,7 @@ router.get("/me", async (req, res) => {
     res.status(401).json({ message: "Invalid or expired token" });
   }
 });
+
 
 // Get user by id
 router.get('/:id', (req, res) => {
