@@ -46,7 +46,7 @@ router.post("/", (req, res) => {
     return res.status(400).json({ message: error.details[0].message });
   }
 
-  const { fullname, email, password, confirmPassword } = value;
+  const { fullname, email, password, confirmPassword, username} = value;
 
   User.findOne({ email: email.toLowerCase() })
     .then((existing) => {
