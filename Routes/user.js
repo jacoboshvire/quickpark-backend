@@ -6,6 +6,7 @@ const jwt = require('jsonwebtoken'),
     cloudinarys = require("../utils/cloudinary.js"),
     upload = require("../utils/mutler.js"),
     path = require("path");
+const user = require('../models/user');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your_jwt_secret_key';
 
@@ -14,6 +15,7 @@ const router = express.Router();
 // Joi validation schema for new user
 const userSchema = Joi.object({
   fullname: Joi.string().min(3).required(),
+  username: Joi.string().min(3).pattern(/^\S+$/).messages({"string.pattern.base": "Username cannot contain spaces",}).required(),
   email: Joi.string().email().required(),
   password: Joi.string().min(6).required(),
   confirmPassword: Joi.ref('password')
@@ -22,6 +24,7 @@ const userSchema = Joi.object({
 // Joi validation schema for updates
 const UesrSchema = Joi.object({
   fullname: Joi.string().min(3),
+  username: Joi.string().min(3).pattern(/^\S+$/).messages({"string.pattern.base": "Username cannot contain spaces",}),
   email: Joi.string().email(),
   password: Joi.string().min(6),
   confirmPassword: Joi.ref('password')
@@ -59,6 +62,7 @@ router.post("/", (req, res) => {
 
       return User.create({
         fullname,
+        username,
         email: email.toLowerCase(),
         password: hashedPassword,
       });
