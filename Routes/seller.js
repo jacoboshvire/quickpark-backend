@@ -23,7 +23,7 @@ router.get("/", async (req,res)=>{
         const limit = parseInt(req.query.limit) || 10;
         const skip = (page - 1) * limit;
 
-        const sellers = await Seller.find().populate("user", "fullname avatar email")
+        const sellers = await Seller.find().populate("user", "fullname avatar email username")
             .skip(skip)
             .limit(limit)
             .lean();
