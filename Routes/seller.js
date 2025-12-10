@@ -1,5 +1,5 @@
 const { default: axios } = require("axios");
-const { time } = require("console");
+const { time, log } = require("console");
 const express = require("express"),
     cloudinarys = require("../utils/cloudinary.js"),
     upload = require("../utils/mutler.js"),
@@ -41,81 +41,90 @@ router.get("/", async (req,res)=>{
 })
 
 //post routes
-router.post("/", auth,
-    upload.single("image"),
-    (req, res) => {
-
-        // 1️⃣ Upload to Cloudinary
-        cloudinarys.uploader.upload(req.file.path)
-            .then((fileresult) => {
-
-                // 2️⃣ Geocode the location
-                let url = `https://maps.googleapis.com/maps/api/geocode/json?address=${req.body.locations}&key=${process.env.GOOGLEAPI}`;
-
-                return axios.get(url)
-                    .then((response) => ({ fileresult, response }));
-            })
-            .then(({ fileresult, response }) => {
-                // Duration (in hours) provided by user
-                const lifetimeMs = 60 * 60 * req.body.duration * 1000;
-                // Extract coordinates
-                let newLng = response.data.results[0].geometry.location.lng;
-                let newLat = response.data.results[0].geometry.location.lat;
-
-                // 3️⃣ Validate input BEFORE creating a Seller
-                const schema = Joi.object({
-                    locations: Joi.string().min(2).required(),
-                    phonenumber: Joi.number().integer().required().min(11),
-                    postalcode: Joi.string().required(),
-                    price: Joi.number().required(),
-                    accountnumber: Joi.number().required().min(10),
-                    accountname: Joi.string().required(),
-                    sortcode: Joi.number().required().min(6),
-                    timeNeeded: Joi.string().required(),
-                    duration: Joi.number().required()   // ADD duration validation
-                });
-
-                const result = schema.validate(req.body);
-                if (result.error) {
-                    return res.status(400).json(result.error.details[0].message);
-                }
-
-                // 4️⃣ Create seller object
-                const seller = new Seller({
-                    locations: req.body.locations,
-                    sortcode: req.body.sortcode,
-                    postalcode: req.body.postalcode,
-                    phonenumber: req.body.phonenumber,
-                    price: req.body.price,
-                    image: fileresult.secure_url,
-                    imagewidth: fileresult.width,
-                    imageheight: fileresult.height,
-                    accountnumber: req.body.accountnumber,
-                    accountname: req.body.accountname,
-                    duration: req.body.duration,
-                    timeNeeded: req.body.timeNeeded,
-                    long: newLng,
-                    lat: newLat,
-
-                    // TTL auto delete
-                    expiresAt: new Date(Date.now() + lifetimeMs),
-
-                    //user data from auth middleware
-                    user:req.user.id
-                });
-
-                // 5️⃣ Save seller
-                return seller.save()
-                    .then((savedSeller) => {
-                        return res.status(200).json({ seller: savedSeller });
-                    })
-            })
-            .catch((error) => {
-                console.error(error);
-                return res.status(500).json({ error: error.message });
-            });
+router.post("/", auth, upload.single("image"), async (req, res) => {
+  try {
+    /* ---------------------- 1️⃣ Validate FILE exists ---------------------- */
+    if (!req.file) {
+      return res.status(400).json({ message: "Image file is required" });
     }
-);
+
+    /* ---------------------- 2️⃣ Validate TEXT INPUT ---------------------- */
+    const schema = Joi.object({
+      locations: Joi.string().min(2).required(),
+      phonenumber: Joi.string().min(10).required(),
+      postalcode: Joi.string().required(),
+      price: Joi.number().required(),
+      accountnumber: Joi.string().min(6).required(),
+      accountname: Joi.string().required(),
+      sortcode: Joi.string().min(6).required(),
+      timeNeeded: Joi.string().required(),
+      duration: Joi.number().required(), // hours
+    });
+
+    const { error } = schema.validate(req.body);
+    if (error) {
+      return res.status(400).json({ message: error.details[0].message });
+    }
+
+    /* ---------------------- 3️⃣ Upload to Cloudinary ---------------------- */
+    const uploadedImage = await cloudinarys.uploader.upload(req.file.path);
+
+    /* ---------------------- 4️⃣ Geocode the location ---------------------- */
+    const encodedAddress = encodeURIComponent(req.body.locations);
+
+    const geoURL = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodedAddress}&key=${process.env.GOOGLEAPI}`;
+
+    const geo = await axios.get(geoURL);
+
+    if (!geo.data.results || geo.data.results.length === 0) {
+      return res.status(400).json({
+        message: "Invalid address provided. Google could not find it.",
+        googleError: geo.data.error_message,
+      });
+    }
+
+    const { lat, lng } = geo.data.results[0].geometry.location;
+
+    /* ---------------------- 5️⃣ Calculate expiry (auto delete) ---------------------- */
+    const lifetimeMs = Number(req.body.duration) * 60 * 60 * 1000;
+
+    /* ---------------------- 6️⃣ Create new seller post ---------------------- */
+    const seller = new Seller({
+      locations: req.body.locations,
+      postalcode: req.body.postalcode,
+      phonenumber: req.body.phonenumber,
+      price: req.body.price,
+      sortcode: req.body.sortcode,
+      accountnumber: req.body.accountnumber,
+      accountname: req.body.accountname,
+      timeNeeded: req.body.timeNeeded,
+      duration: req.body.duration,
+
+      long: lng,
+      lat: lat,
+
+      image: uploadedImage.secure_url,
+      imagewidth: uploadedImage.width,
+      imageheight: uploadedImage.height,
+
+      expiresAt: new Date(Date.now() + lifetimeMs),
+
+      user: req.user.id, // auth middleware
+    });
+
+    const savedSeller = await seller.save();
+
+    return res.status(201).json({
+      message: "Seller post created successfully!",
+      seller: savedSeller,
+    });
+
+  } catch (err) {
+    console.error("SELLER POST ERROR:", err);
+    return res.status(500).json({ message: err.message || "Server error" });
+  }
+});
+
 //delete routes
 router.delete("/:_id", async (req, res)=>{
     try {

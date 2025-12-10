@@ -5,16 +5,7 @@ const multer = require("multer"),
 // multer config
 module.exports = multer({
     storage: multer.diskStorage({
-        destination: (req, file, cb) => {
-            cb(null, "uploads/"); // temp folder
-        },
-        filename: (req, file, cb) => {
-            cb(
-            null,
-            file.fieldname + "-" + Date.now() + path.extname(file.originalname)
-            );
-        }
-}),
+    }),
     fileFilter: (req, file, cb) => {
         const ext = path.extname(file.originalname);
         if (ext !== ".jpg" && ext !== ".png" && ext !== ".jpeg" && ext !== ".webp") {
