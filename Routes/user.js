@@ -7,6 +7,7 @@ const jwt = require('jsonwebtoken'),
     upload = require("../utils/mutler.js"),
     path = require("path");
 const user = require('../models/user');
+const auth = require("../middleware/auth");
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your_jwt_secret_key';
 
@@ -46,7 +47,7 @@ router.post("/", (req, res) => {
     return res.status(400).json({ message: error.details[0].message });
   }
 
-  const { fullname, email, password, confirmPassword, username} = value;
+  const { fullname, email, password, confirmPassword, } = value;
 
   User.findOne({ email: email.toLowerCase() })
     .then((existing) => {
@@ -75,6 +76,21 @@ router.post("/", (req, res) => {
       console.error("Error in POST /users:", e);
       res.status(500).json({ message: err.message || "Server error" });
     });
+});
+
+router.post("/save-fcm-token", auth, async (req, res) => {
+  const { token } = req.body;
+
+  if (!token) {
+    return res.status(400).json({ message: "FCM token required" });
+  }
+
+  await User.findByIdAndUpdate(
+    req.user.id,
+    { $addToSet: { fcmTokens: token } } // avoid duplicates
+  );
+
+  res.json({ message: "FCM token saved" });
 });
 
 // List users
@@ -143,13 +159,13 @@ router.get('/:id', (req, res) => {
 // Update user
 router.put("/:id", upload.single("avatar"), async (req, res) => {
   try {
-    // ✔ Validate fields correctly
+    // Validate fields correctly
     const { error } = UesrSchema.validate(req.body);
     if (error) {
       return res.status(400).json({ message: error.details[0].message });
     }
 
-    // ✔ Find user
+    // Find user
     let user = await User.findById(req.params.id);
     if (!user) {
       return res.status(404).json({ message: "User not found" });
@@ -157,18 +173,18 @@ router.put("/:id", upload.single("avatar"), async (req, res) => {
 
     let updates = { ...req.body };
 
-    // ✔ Hash password if included
+    // Hash password if included
     if (updates.password) {
       updates.password = await bcrypt.hash(updates.password, 10);
     }
 
-    // ✔ Upload image if provided
+    // Upload image if provided
     if (req.file) {
       const cloudUpload = await cloudinarys.uploader.upload(req.file.path);
       updates.avatar = cloudUpload.secure_url; // add avatar field
     }
 
-    // ✔ Perform update
+    // Perform update
     const updatedUser = await User.findByIdAndUpdate(req.params.id, updates, {
       new: true,
     }).select("-password");

@@ -1,5 +1,5 @@
 const { default: axios } = require("axios");
-const { time, log } = require("console");
+const sendNotification = require("../utils/sendNotifications.js");
 const express = require("express"),
     cloudinarys = require("../utils/cloudinary.js"),
     upload = require("../utils/mutler.js"),
@@ -43,12 +43,12 @@ router.get("/", async (req,res)=>{
 //post routes
 router.post("/", auth, upload.single("image"), async (req, res) => {
   try {
-    /* ---------------------- 1️⃣ Validate FILE exists ---------------------- */
+    /* 1️⃣ Validate file */
     if (!req.file) {
       return res.status(400).json({ message: "Image file is required" });
     }
 
-    /* ---------------------- 2️⃣ Validate TEXT INPUT ---------------------- */
+    /* 2️⃣ Validate body */
     const schema = Joi.object({
       locations: Joi.string().min(2).required(),
       phonenumber: Joi.string().min(10).required(),
@@ -58,7 +58,7 @@ router.post("/", auth, upload.single("image"), async (req, res) => {
       accountname: Joi.string().required(),
       sortcode: Joi.string().min(6).required(),
       timeNeeded: Joi.string().required(),
-      duration: Joi.number().required(), // hours
+      duration: Joi.number().required(),
     });
 
     const { error } = schema.validate(req.body);
@@ -66,29 +66,24 @@ router.post("/", auth, upload.single("image"), async (req, res) => {
       return res.status(400).json({ message: error.details[0].message });
     }
 
-    /* ---------------------- 3️⃣ Upload to Cloudinary ---------------------- */
+    /* 3️⃣ Upload image */
     const uploadedImage = await cloudinarys.uploader.upload(req.file.path);
 
-    /* ---------------------- 4️⃣ Geocode the location ---------------------- */
+    /* 4️⃣ Geocode address */
     const encodedAddress = encodeURIComponent(req.body.locations);
-
     const geoURL = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodedAddress}&key=${process.env.GOOGLEAPI}`;
-
     const geo = await axios.get(geoURL);
 
-    if (!geo.data.results || geo.data.results.length === 0) {
-      return res.status(400).json({
-        message: "Invalid address provided. Google could not find it.",
-        googleError: geo.data.error_message,
-      });
+    if (!geo.data.results.length) {
+      return res.status(400).json({ message: "Invalid address" });
     }
 
     const { lat, lng } = geo.data.results[0].geometry.location;
 
-    /* ---------------------- 5️⃣ Calculate expiry (auto delete) ---------------------- */
+    /* 5️⃣ Expiry time */
     const lifetimeMs = Number(req.body.duration) * 60 * 60 * 1000;
 
-    /* ---------------------- 6️⃣ Create new seller post ---------------------- */
+    /* 6️⃣ Create seller post */
     const seller = new Seller({
       locations: req.body.locations,
       postalcode: req.body.postalcode,
@@ -100,20 +95,39 @@ router.post("/", auth, upload.single("image"), async (req, res) => {
       timeNeeded: req.body.timeNeeded,
       duration: req.body.duration,
 
+      lat,
       long: lng,
-      lat: lat,
 
       image: uploadedImage.secure_url,
       imagewidth: uploadedImage.width,
       imageheight: uploadedImage.height,
 
       expiresAt: new Date(Date.now() + lifetimeMs),
-
-      user: req.user.id, // auth middleware
+      user: req.user.id,
     });
 
     const savedSeller = await seller.save();
 
+    /* =========================
+       🔔 PUSH NOTIFICATIONS
+    ========================= */
+    const users = await User.find({
+      _id: { $ne: req.user.id }, // exclude creator
+      fcmTokens: { $exists: true, $ne: [] },
+    });
+
+    const tokens = users.flatMap((u) => u.fcmTokens);
+
+    await sendNotification(
+      tokens,
+      "New Parking Space Available 🚗",
+      `${req.body.locations} · £${req.body.price}`,
+      {
+        sellerId: savedSeller._id.toString(),
+      }
+    );
+
+    console.log(savedSeller)
     return res.status(201).json({
       message: "Seller post created successfully!",
       seller: savedSeller,
@@ -124,6 +138,7 @@ router.post("/", auth, upload.single("image"), async (req, res) => {
     return res.status(500).json({ message: err.message || "Server error" });
   }
 });
+
 
 //delete routes
 router.delete("/:_id", async (req, res)=>{
@@ -151,7 +166,6 @@ router.delete("/:_id", async (req, res)=>{
         res.status(500).json({ message: "Server error" });
     }
 })
-//put routes
 
 //get post with id
 router.get("/:id", async (req, res)=>{

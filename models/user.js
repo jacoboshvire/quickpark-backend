@@ -31,11 +31,16 @@ const UserSchema = new mongoose.Schema(
     avatar: {
       type: String,
       default: "https://res.cloudinary.com/dr0yyqvj6/image/upload/v1765055574/avatar_l6mc3s.png"
+    },
+    fcmTokens: {
+      type: [String],
+      default: []
     }
   },
   {
     timestamps: true // adds createdAt and updatedAt
   }
+
 );
 
 module.exports = mongoose.model("User", UserSchema);
