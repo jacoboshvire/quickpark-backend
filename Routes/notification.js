@@ -33,4 +33,15 @@ router.get("/unread-count", auth, async (req, res) => {
   res.json({ count });
 });
 
+// DELETE /api/notifications/:id
+router.delete("/:id", auth, async (req, res) => {
+  await Notification.findOneAndDelete({
+    _id: req.params.id,
+    user: req.user.id,
+  });
+
+  res.json({ message: "Notification deleted" });
+});
+
+
 module.exports = router;
