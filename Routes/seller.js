@@ -1,5 +1,5 @@
 const { default: axios } = require("axios");
-const sendNotification = require("../utils/sendNotifications.js");
+const sendNotification = require("../utils/sendNotifications");
 const express = require("express"),
     cloudinarys = require("../utils/cloudinary.js"),
     upload = require("../utils/mutler.js"),
@@ -113,30 +113,38 @@ router.post("/", auth, upload.single("image"), async (req, res) => {
     /* =========================
        🔔 PUSH NOTIFICATIONS
     ========================= */
-    const users = await User.find({
-      _id: { $ne: req.user.id },
-      fcmTokens: { $exists: true, $ne: [] },
-    });
+/* =========================
+   🔔 NOTIFICATIONS
+========================= */
 
-    // Save notification history
-    await Notification.insertMany(
-      users.map((u) => ({
-        user: u._id,
-        title: "New Parking Space Available 🚗",
-        body: `${req.body.locations} · £${req.body.price}`,
-        data: { sellerId: seller._id },
-        type: "SELLER",
-      }))
-    );
+// 1️⃣ Fetch users FIRST
+const users = await User.find({
+  _id: { $ne: req.user.id },
+});
 
-    // Send push (NON-BLOCKING)
-    const tokens = users.flatMap((u) => u.fcmTokens);
-    sendNotification(
-      tokens,
-      "New Parking Space Available 🚗",
-      `${req.body.locations} · £${req.body.price}`,
-      { sellerId: seller._id.toString() }
-    ).catch(console.error);
+// 2️⃣ Now users EXISTS here
+await Notification.insertMany(
+  users.map((u) => ({
+    user: u._id,
+    title: "New Parking Space Available 🚗",
+    body: `${req.body.locations} · £${req.body.price}`,
+    data: { sellerId: savedSeller._id },
+    type: "SELLER",
+  }))
+);
+
+// 3️⃣ And here
+const tokens = users
+  .filter((u) => Array.isArray(u.fcmTokens) && u.fcmTokens.length > 0)
+  .flatMap((u) => u.fcmTokens);
+
+sendNotification(
+  tokens,
+  "New Parking Space Available 🚗",
+  `${req.body.locations} · £${req.body.price}`,
+  { sellerId: savedSeller._id.toString() }
+).catch(console.error);
+
 
 
     console.log(savedSeller)
