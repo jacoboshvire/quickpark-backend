@@ -8,6 +8,7 @@ const express = require("express"),
     auth = require("../middleware/auth.js"),
     Joi = require("joi"),
     startWatch = require("../utils/watcher.js");
+    const Notification = require("../models/notification");
 
     //to auto delete the image from cloudinary after 
     // the post auto delete it self after the expired time
@@ -111,10 +112,17 @@ router.post("/", auth, upload.single("image"), async (req, res) => {
     /* =========================
        🔔 PUSH NOTIFICATIONS
     ========================= */
-    const users = await User.find({
-      _id: { $ne: req.user.id }, // exclude creator
-      fcmTokens: { $exists: true, $ne: [] },
+  for (const user of users) {
+    await Notification.create({
+      user: user._id,
+      title: "New Parking Space Available 🚗",
+      body: `${req.body.locations} · £${req.body.price}`,
+      data: {
+        sellerId: savedSeller._id,
+      },
+      type: "SELLER",
     });
+  }
 
     const tokens = users.flatMap((u) => u.fcmTokens);
 
