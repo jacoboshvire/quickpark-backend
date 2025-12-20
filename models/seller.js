@@ -17,6 +17,7 @@ const Sellerschema = new mongoose.Schema({
     image: String,
     imagewidth: Number,
     imageheight: Number,
+    duration: Number,
     lat: Number,
     long: Number,
     duration: Number,
