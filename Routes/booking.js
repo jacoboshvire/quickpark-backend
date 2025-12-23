@@ -123,7 +123,7 @@ router.put("/booking/:id/reject", auth, async (req, res) => {
 
     await Notification.create({
       user: booking.buyer,
-      title: "Booking Rejected ❌",
+      title: "Booking Rejected ",
       body: "Your booking request was rejected",
       data: { bookingId: booking._id },
       type: "SYSTEM",
