@@ -6,7 +6,6 @@ const jwt = require('jsonwebtoken'),
     cloudinarys = require("../utils/cloudinary.js"),
     upload = require("../utils/mutler.js"),
     path = require("path");
-const user = require('../models/user');
 const auth = require("../middleware/auth");
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your_jwt_secret_key';
@@ -222,47 +221,42 @@ router.post("/login", async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    // Validate fields
     if (!email || !password) {
       return res.status(400).json({ message: "Email and password required" });
     }
 
-    // Find user
     const user = await User.findOne({ email: email.toLowerCase() });
     if (!user) {
       return res.status(401).json({ message: "Invalid email or password" });
     }
 
-    // Compare password
     const match = await bcrypt.compare(password, user.password);
     if (!match) {
       return res.status(401).json({ message: "Invalid email or password" });
     }
 
-    // Create JWT token
     const token = jwt.sign(
-      { id: user._id, email: user.email },
+      { id: user._id, email: user.email, role: user.role },
       JWT_SECRET,
-      { expiresIn: "7d" } // one week
+      { expiresIn: "7d" }
     );
 
-    // Return safe user + token
-    res.json({
+    return res.json({
       message: "Login successful",
       token,
       user: {
         _id: user._id,
         fullname: user.fullname,
-        email: user.email
-      }
+        email: user.email,
+        role: user.role,
+      },
     });
 
   } catch (err) {
-    console.error("Error in POST /users/login:", err);
-    res.status(500).json({ message: "Server error" });
+    console.error("Error in POST /user/login:", err);
+    return res.status(500).json({ message: "Server error" });
   }
 });
-
 
 
 
