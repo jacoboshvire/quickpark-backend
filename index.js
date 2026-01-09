@@ -27,6 +27,7 @@ app.use("/api/sellerpost", require("./Routes/seller"))
 app.use("/api/user", require("./Routes/user"))
 app.use("/api/notification", require("./Routes/notification"))
 app.use("/api/booking", require("./Routes/booking"))
+app.use("/api/admin/notifications", "./Router/adminNotifications");
 
 
 //home welcome note and direction on how to use the api

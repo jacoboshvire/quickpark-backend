@@ -1,16 +1,26 @@
 const jwt = require("jsonwebtoken");
-const JWT_SECRET = process.env.JWT_SECRET || "SUPER_SECRET_KEY";
+const JWT_SECRET = process.env.JWT_SECRET;
 
-module.exports = function auth(req, res, next) {
-  const token = req.headers.authorization?.split(" ")[1];
+function auth(req, res, next) {
+  const token = req.cookies?.token;
 
-  if (!token) return res.status(401).json({ message: "No token provided" });
+  if (!token) {
+    return res.status(401).json({ message: "Not authenticated" });
+  }
 
   try {
-    const decoded = jwt.verify(token, JWT_SECRET);
-    req.user = decoded;  // contains user id + email
+    req.user = jwt.verify(token, JWT_SECRET);
     next();
   } catch (err) {
     return res.status(401).json({ message: "Invalid token" });
   }
-};
+}
+
+function isAdmin(req, res, next) {
+  if (req.user.role !== "ADMIN") {
+    return res.status(403).json({ message: "Admin access only" });
+  }
+  next();
+}
+
+module.exports = { auth, isAdmin };

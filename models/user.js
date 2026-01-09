@@ -14,6 +14,13 @@ const UserSchema = new mongoose.Schema(
       lowercase: true, // normalize emails
       trim: true
     },
+     // 🔑 ROLE-BASED ACCESS CONTROL
+    role: {
+      type: String,
+      enum: ["USER", "ADMIN"],
+      default: "USER",
+      index: true,
+    },
     username: {
       type: String,
       required: true,
