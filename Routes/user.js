@@ -6,7 +6,7 @@ const jwt = require('jsonwebtoken'),
     cloudinarys = require("../utils/cloudinary.js"),
     upload = require("../utils/mutler.js"),
     path = require("path");
-const auth = require("../middleware/auth");
+const {isAdmin, auth} = require("../middleware/auth");
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your_jwt_secret_key';
 

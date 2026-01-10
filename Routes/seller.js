@@ -5,7 +5,7 @@ const express = require("express"),
     upload = require("../utils/mutler.js"),
     path = require("path"),
     Seller = require("../models/seller.js"),
-    auth = require("../middleware/auth.js"),
+    {auth} = require("../middleware/auth.js"),
     Joi = require("joi"),
     startWatch = require("../utils/watcher.js");
 const Notification = require("../models/notification");
@@ -43,7 +43,11 @@ router.get("/", async (req,res)=>{
 })
 
 //post routes
-router.post("/", auth, upload.single("image"), async (req, res) => {
+router.post(
+  "/",
+  auth,
+  upload.single("image"),
+  async (req, res) => {
   try {
     /* 1️⃣ Validate file */
     if (!req.file) {

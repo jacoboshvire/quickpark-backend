@@ -2,7 +2,7 @@ const express = require("express");
 const Seller = require("../models/seller");
 const Booking = require("../models/bookings");
 const Notification = require("../models/notification");
-const auth = require("../middleware/auth");
+const {auth} = require("../middleware/auth");
 
 const router = express.Router();
 
