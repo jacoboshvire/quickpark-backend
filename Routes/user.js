@@ -104,7 +104,7 @@ router.get('/', (req, res) => {
 });
 
 // GET LOGGED-IN USER USING JWT
-router.get("/me", auth, async (req, res) => {
+router.get("/me", async (req, res) => {
   try {
     let token = null;
 
