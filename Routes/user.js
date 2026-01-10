@@ -109,7 +109,7 @@ router.get("/me", async (req, res) => {
     let token = null;
 
     // Check Authorization header
-    if (req.headers.authorization?.startsWith("Bearer ")) {
+    if (req.headers.authorization?.startsWith("Bearer")) {
       token = req.headers.authorization.split(" ")[1];
     }
 
