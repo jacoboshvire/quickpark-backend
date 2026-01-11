@@ -18,7 +18,8 @@ const userSchema = Joi.object({
   username: Joi.string().min(3).pattern(/^\S+$/).messages({"string.pattern.base": "Username cannot contain spaces",}).required(),
   email: Joi.string().email().required(),
   password: Joi.string().min(6).required(),
-  confirmPassword: Joi.ref('password')
+  confirmPassword: Joi.ref('password'),
+  role: Joi.string().valid('USER', 'ADMIN'),
 });
 
 // Joi validation schema for updates
@@ -27,7 +28,8 @@ const UesrSchema = Joi.object({
   username: Joi.string().min(3).pattern(/^\S+$/).messages({"string.pattern.base": "Username cannot contain spaces",}),
   email: Joi.string().email(),
   password: Joi.string().min(6),
-  confirmPassword: Joi.ref('password')
+  confirmPassword: Joi.ref('password'),
+  role: Joi.string().valid('USER', 'ADMIN'),
 }).min(1); // must include at least one field
 
 // Helper to remove password
@@ -46,7 +48,7 @@ router.post("/", (req, res) => {
     return res.status(400).json({ message: error.details[0].message });
   }
 
-  const { fullname, email, password, username} = value;
+  const { fullname, email, password, username, role} = value;
 
   User.findOne({ email: email.toLowerCase() })
     .then((existing) => {
@@ -63,6 +65,7 @@ router.post("/", (req, res) => {
       return User.create({
         fullname,
         username,
+        role: role || 'USER',
         email: email.toLowerCase(),
         password: hashedPassword,
       });
@@ -73,7 +76,7 @@ router.post("/", (req, res) => {
     })
     .catch(e => {
       console.error("Error in POST /users:", e);
-      res.status(500).json({ message: err.message || "Server error" });
+      res.status(500).json({ message: e.message || "Server error" });
     });
 });
 

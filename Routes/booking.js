@@ -7,6 +7,46 @@ const {auth} = require("../middleware/auth");
 const router = express.Router();
 
 /* =========================
+   GET BOOKING BY ID
+========================= */
+router.get("/booking/:id", auth, async (req, res) => {
+  try {
+    const bookingId = req.params.id;
+
+    // 1️Validate ObjectId
+    if (!bookingId.match(/^[0-9a-fA-F]{24}$/)) {
+      return res.status(400).json({ message: "Invalid booking ID" });
+    }
+
+    // 2Find booking
+    const booking = await Booking.findById(bookingId)
+      .populate("sellerPost")
+      .populate("buyer", "fullname email")
+      .populate("seller", "fullname email");
+
+    if (!booking) {
+      return res.status(404).json({ message: "Booking not found" });
+    }
+
+    // 3️Authorization: buyer or seller only
+    const userId = req.user.id;
+    if (
+      booking.buyer.toString() !== userId &&
+      booking.seller.toString() !== userId
+    ) {
+      return res.status(403).json({ message: "Unauthorized" });
+    }
+
+    // 4️Success
+    res.json(booking);
+  } catch (err) {
+    console.error("GET BOOKING BY ID ERROR:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+
+/* =========================
    CREATE BOOKING (PENDING)
 ========================= */
 router.post("/book/:sellerId", auth, async (req, res) => {
