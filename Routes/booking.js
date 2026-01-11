@@ -19,11 +19,7 @@ router.get("/booking/:id", auth, async (req, res) => {
     }
 
     // 2Find booking
-    const booking = await Booking.findById(bookingId)
-      .populate("sellerPost")
-      .populate("buyer", "fullname email")
-      .populate("seller", "fullname email");
-
+    const booking = await Booking.findById(bookingId);
     if (!booking) {
       return res.status(404).json({ message: "Booking not found" });
     }
